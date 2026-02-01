@@ -5,7 +5,7 @@ A Windows system tray app that reads highlighted text aloud using [Kokoro TTS](h
 ## How It Works
 
 1. Highlight text in any application
-2. Press **Ctrl+Shift+R** to hear it spoken
+2. Press **Ctrl+Shift+R** to hear it spoken (cursor shows arrow+hourglass while generating)
 3. Press **Ctrl+Shift+R** again to stop playback
 
 ## Requirements

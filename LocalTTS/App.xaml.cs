@@ -100,13 +100,16 @@ public partial class App : Application
                 return;
             }
 
-            _trayIcon!.ToolTipText = "LocalTTS - Speaking...";
+            _trayIcon!.ToolTipText = "LocalTTS - Generating...";
+            CursorIndicator.ShowBusy();
             var audioData = await _ttsService!.SynthesizeAsync(text);
+            CursorIndicator.Restore();
             _audioPlayer!.Play(audioData);
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
         }
         catch (Exception ex)
         {
+            CursorIndicator.Restore();
             _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
             _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
         }
