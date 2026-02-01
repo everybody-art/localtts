@@ -13,6 +13,7 @@ A Windows system tray app that reads highlighted text aloud using [Kokoro TTS](h
 - Windows 10/11
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- For GPU acceleration: NVIDIA GPU with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 
 ## Setup
 
@@ -22,7 +23,7 @@ cd localtts
 dotnet run --project LocalTTS
 ```
 
-On first launch the app will pull and start the Kokoro TTS Docker container (`ghcr.io/remsky/kokoro-fastapi-cpu:latest`). This may take a few minutes the first time. A tray icon will appear and show "Ready" when the TTS engine is available.
+On first launch the app will pull and start the Kokoro TTS Docker container. This may take a few minutes the first time. A tray icon will appear and show "Ready" when the TTS engine is available.
 
 ## Architecture
 
@@ -35,13 +36,24 @@ Global hotkey (Ctrl+Shift+R)
 
 The app automatically manages the Docker container lifecycle — starting it on launch and stopping it on exit.
 
-## Configuration
+## Settings
 
-The default voice is `af_heart`. To change it, edit `voice` in `LocalTTS/Services/TtsService.cs`.
+Right-click the tray icon → **Settings...** to configure:
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Docker Image | `ghcr.io/remsky/kokoro-fastapi-cpu:latest` | Use `ghcr.io/remsky/kokoro-fastapi-gpu:latest` for GPU acceleration |
+| Port | `8880` | Local port for the Kokoro API |
+| Container Name | `localtts-kokoro` | Docker container name |
+| Voice | `af_heart` | Kokoro voice ID |
+| Auto-start container | On | Start the Docker container on app launch |
+| Auto-stop container | On | Stop the Docker container on app exit |
+
+Settings are saved to `settings.json` next to the executable.
 
 ## Troubleshooting
 
-Logs are written to `localtts.log` in the application's output directory (e.g. `LocalTTS/bin/Debug/net8.0-windows/localtts.log`).
+Right-click the tray icon → **View Log...** to see real-time log output. Logs are also written to `localtts.log` in the application's output directory.
 
 Common issues:
 - **"Starting Kokoro..." stays forever**: Check that Docker Desktop is running and `docker ps` works from your terminal

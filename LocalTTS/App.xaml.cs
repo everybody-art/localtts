@@ -11,6 +11,7 @@ public partial class App : Application
     private AudioPlayerService? _audioPlayer;
     private TtsService? _ttsService;
     private DockerService? _dockerService;
+    private AppSettings _settings = new();
     private bool _isProcessing;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -18,9 +19,10 @@ public partial class App : Application
         base.OnStartup(e);
         Log.Info("App starting...");
 
+        _settings = AppSettings.Load();
         _audioPlayer = new AudioPlayerService();
-        _ttsService = new TtsService();
-        _dockerService = new DockerService();
+        _ttsService = new TtsService(_settings);
+        _dockerService = new DockerService(_settings);
 
         _trayIcon = new TaskbarIcon
         {
@@ -39,7 +41,6 @@ public partial class App : Application
         }
         catch
         {
-            // Use default icon if resource not found
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
         }
 
@@ -67,6 +68,14 @@ public partial class App : Application
     {
         var menu = new System.Windows.Controls.ContextMenu();
 
+        var settingsItem = new System.Windows.Controls.MenuItem { Header = "Settings..." };
+        settingsItem.Click += (_, _) => OpenSettings();
+        menu.Items.Add(settingsItem);
+
+        var logItem = new System.Windows.Controls.MenuItem { Header = "View Log..." };
+        logItem.Click += (_, _) => OpenLog();
+        menu.Items.Add(logItem);
+
         var stopItem = new System.Windows.Controls.MenuItem { Header = "Stop Playback" };
         stopItem.Click += (_, _) => _audioPlayer?.Stop();
         menu.Items.Add(stopItem);
@@ -78,6 +87,30 @@ public partial class App : Application
         menu.Items.Add(exitItem);
 
         return menu;
+    }
+
+    private LogWindow? _logWindow;
+
+    private void OpenLog()
+    {
+        if (_logWindow is { IsLoaded: true })
+        {
+            _logWindow.Activate();
+            return;
+        }
+        _logWindow = new LogWindow();
+        _logWindow.Show();
+    }
+
+    private void OpenSettings()
+    {
+        var window = new SettingsWindow(_settings);
+        if (window.ShowDialog() == true)
+        {
+            _ttsService = new TtsService(_settings);
+            _dockerService = new DockerService(_settings);
+            Log.Info("Settings updated");
+        }
     }
 
     private async void OnHotkeyPressed()

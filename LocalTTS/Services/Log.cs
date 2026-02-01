@@ -9,6 +9,8 @@ public static class Log
 
     private static readonly object Lock = new();
 
+    public static event Action<string>? LineWritten;
+
     public static void Info(string message)
     {
         var line = $"[{DateTime.Now:HH:mm:ss}] {message}";
@@ -16,6 +18,7 @@ public static class Log
         {
             File.AppendAllText(LogPath, line + Environment.NewLine);
         }
+        LineWritten?.Invoke(line);
     }
 
     public static void Error(string message, Exception? ex = null)
@@ -27,5 +30,6 @@ public static class Log
         {
             File.AppendAllText(LogPath, line + Environment.NewLine);
         }
+        LineWritten?.Invoke(line);
     }
 }
