@@ -25,13 +25,24 @@ public static class TextCaptureService
         var hwnd = GetForegroundWindow();
         Log.Info($"Foreground window: {hwnd}");
 
-        // Release ALL modifier keys to ensure clean state
+        // Release ALL modifier keys and wait until they're actually up
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        Thread.Sleep(100);
 
-        // Verify modifiers are released
+        // Poll until modifiers are confirmed released (max 500ms)
+        for (int i = 0; i < 50; i++)
+        {
+            Thread.Sleep(10);
+            bool ctrlHeld = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+            bool shiftHeld = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+            if (!ctrlHeld && !shiftHeld)
+                break;
+            // Re-send release in case the physical key is still down
+            keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        }
+
         var ctrlState = GetAsyncKeyState(VK_CONTROL);
         var shiftState = GetAsyncKeyState(VK_SHIFT);
         Log.Info($"After release - Ctrl: {ctrlState}, Shift: {shiftState}");
@@ -59,14 +70,14 @@ public static class TextCaptureService
             Log.Error("Failed to clear clipboard", ex);
         }
 
-        // Send Ctrl+C via keybd_event
+        // Send Ctrl+C via keybd_event with sufficient delays
         Log.Info("Sending Ctrl+C via keybd_event...");
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(30);
+        Thread.Sleep(60);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(30);
+        Thread.Sleep(60);
         keybd_event(VK_C, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
-        Thread.Sleep(30);
+        Thread.Sleep(60);
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
 
         Log.Info("Waiting for clipboard...");

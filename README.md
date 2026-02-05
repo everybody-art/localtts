@@ -5,15 +5,18 @@ A Windows system tray app that reads highlighted text aloud using [Kokoro TTS](h
 ## How It Works
 
 1. Highlight text in any application
-2. Press **Ctrl+Shift+R** to hear it spoken (cursor shows arrow+hourglass while generating)
-3. Press **Ctrl+Shift+R** again to stop playback
+2. Press **Ctrl+Shift+R**
+3. If Reader View is enabled (default), the reader window opens and can auto-play TTS
+4. If Reader View is disabled, the text is read aloud immediately without the reader window
+5. Press **Ctrl+Shift+R** again while audio is playing to stop playback
 
 ### Reader View
 
-Double-press **Ctrl+Shift+R** (within 500ms) to open a clean reading window with the selected text. The window:
+When Reader View is enabled, pressing **Ctrl+Shift+R** opens a clean reading window with the selected text. The window:
 - Auto-plays TTS on open (configurable)
 - Has font size controls (+/-)
 - Supports dark mode
+- Highlights the current word in sync with speech
 - Closes when you click away or press Esc
 
 ## Requirements
@@ -38,7 +41,9 @@ On first launch the app will pull and start the Kokoro TTS Docker container. Thi
 ```
 Global hotkey (Ctrl+Shift+R)
   -> Copies selected text via simulated Ctrl+C
+  -> If Reader View is enabled: open reader window
   -> POST to Kokoro-FastAPI (localhost:8880)
+  -> If Reader View is open: use captioned speech for word timestamps
   -> Plays audio via NAudio
 ```
 
@@ -56,7 +61,7 @@ Right-click the tray icon → **Settings...** to configure:
 | Voice | `af_heart` | Kokoro voice ID |
 | Auto-start container | On | Start the Docker container on app launch |
 | Auto-stop container | On | Stop the Docker container on app exit |
-| Enable Reader View | On | Allow double-press to open reader window |
+| Enable Reader View | On | Show reader window on hotkey (when off, hotkey plays audio only) |
 | Reader Auto-play | On | Auto-play TTS when reader opens |
 | Reader Dark Mode | Off | Use dark theme for reader window |
 | Reader Font | Segoe UI | Font family for reader text |
