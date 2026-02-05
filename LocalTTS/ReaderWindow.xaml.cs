@@ -10,16 +10,18 @@ public partial class ReaderWindow : Window
 {
     private readonly AppSettings _settings;
     private readonly Action<string>? _onPlayRequested;
+    private readonly Action? _onClosed;
     private string _currentText = string.Empty;
     private int _fontSize;
     private bool _hasBeenActivated;
     private bool _isClosing;
 
-    public ReaderWindow(string text, AppSettings settings, Action<string>? onPlayRequested = null)
+    public ReaderWindow(string text, AppSettings settings, Action<string>? onPlayRequested = null, Action? onClosed = null)
     {
         InitializeComponent();
         _settings = settings;
         _onPlayRequested = onPlayRequested;
+        _onClosed = onClosed;
         _fontSize = settings.ReaderFontSize;
 
         ApplyTheme();
@@ -28,7 +30,13 @@ public partial class ReaderWindow : Window
         // Only close on deactivate AFTER window has been activated once
         Activated += OnActivated;
         Deactivated += OnDeactivated;
+        Closed += OnWindowClosed;
         KeyDown += OnKeyDown;
+    }
+
+    private void OnWindowClosed(object? sender, EventArgs e)
+    {
+        _onClosed?.Invoke();
     }
 
     private void OnActivated(object? sender, EventArgs e)

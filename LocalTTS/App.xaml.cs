@@ -226,7 +226,7 @@ public partial class App : Application
         else
         {
             Log.Info("Creating new reader window");
-            _readerWindow = new ReaderWindow(cleanedText, _settings, OnReaderPlayRequested);
+            _readerWindow = new ReaderWindow(cleanedText, _settings, OnReaderPlayRequested, OnReaderClosed);
             _readerWindow.Show();
             Log.Info("Reader window shown");
         }
@@ -244,6 +244,11 @@ public partial class App : Application
     {
         _audioPlayer?.Stop();
         _ = PerformTtsForText(text);
+    }
+
+    private void OnReaderClosed()
+    {
+        _audioPlayer?.Stop();
     }
 
     private async Task PerformTtsForText(string text)
