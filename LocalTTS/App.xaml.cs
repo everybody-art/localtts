@@ -15,8 +15,6 @@ public partial class App : Application
     private bool _isProcessing;
 
     // Reader View state
-    private DateTime _lastHotkeyPress = DateTime.MinValue;
-    private CancellationTokenSource? _hotkeyDelayCancel;
     private ReaderWindow? _readerWindow;
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -26,6 +24,7 @@ public partial class App : Application
 
         _settings = AppSettings.Load();
         _audioPlayer = new AudioPlayerService();
+        _audioPlayer.PlaybackStopped += OnPlaybackStopped;
         _ttsService = new TtsService(_settings);
         _dockerService = new DockerService(_settings);
 
@@ -127,43 +126,17 @@ public partial class App : Application
             return;
         }
 
-        var now = DateTime.Now;
-        var timeSinceLastPress = (now - _lastHotkeyPress).TotalMilliseconds;
-        _lastHotkeyPress = now;
+        Log.Info($"Hotkey pressed. ShowReaderWindow: {_settings.ShowReaderWindow}");
 
-        Log.Info($"Hotkey pressed. Time since last: {timeSinceLastPress:F0}ms, ReaderEnabled: {_settings.ReaderViewEnabled}");
-
-        // Cancel any pending single-press action
-        _hotkeyDelayCancel?.Cancel();
-
-        if (_settings.ReaderViewEnabled && timeSinceLastPress < _settings.DoublePressTimeoutMs)
+        if (_settings.ShowReaderWindow)
         {
-            // Double press detected - open reader
-            Log.Info("Double-press detected - opening reader");
+            // Open reader window with highlighting
             OpenReaderView();
-        }
-        else if (_settings.ReaderViewEnabled)
-        {
-            // Wait to see if this becomes a double press
-            Log.Info($"Waiting {_settings.DoublePressTimeoutMs}ms for potential double-press...");
-            _hotkeyDelayCancel = new CancellationTokenSource();
-            try
-            {
-                await Task.Delay(_settings.DoublePressTimeoutMs, _hotkeyDelayCancel.Token);
-                // No second press came - do TTS
-                Log.Info("No double-press - performing TTS");
-                await PerformTts();
-            }
-            catch (TaskCanceledException)
-            {
-                // Second press came - handled above
-                Log.Info("Wait cancelled - second press detected");
-            }
         }
         else
         {
-            // Reader view disabled - immediate TTS
-            Log.Info("Reader disabled - immediate TTS");
+            // TTS without window
+            Log.Info("Reader window disabled - TTS only");
             await PerformTts();
         }
     }
@@ -234,21 +207,64 @@ public partial class App : Application
         // Auto-play if enabled
         if (_settings.ReaderAutoPlay)
         {
-            Log.Info("Auto-playing TTS");
+            Log.Info("Auto-playing TTS with highlighting");
             _audioPlayer?.Stop();
-            _ = PerformTtsForText(cleanedText);
+            _ = PerformTtsWithHighlighting(cleanedText);
         }
     }
 
     private void OnReaderPlayRequested(string text)
     {
         _audioPlayer?.Stop();
-        _ = PerformTtsForText(text);
+        _ = PerformTtsWithHighlighting(text);
     }
 
     private void OnReaderClosed()
     {
         _audioPlayer?.Stop();
+    }
+
+    private void OnPlaybackStopped()
+    {
+        // Stop highlighting when playback ends
+        _readerWindow?.StopHighlighting();
+    }
+
+    private async Task PerformTtsWithHighlighting(string text)
+    {
+        if (_isProcessing) return;
+        _isProcessing = true;
+
+        try
+        {
+            _trayIcon!.ToolTipText = "LocalTTS - Generating...";
+            CursorIndicator.ShowBusy();
+
+            // Get audio with timestamps for highlighting
+            var result = await _ttsService!.SynthesizeWithTimestampsAsync(text, includeTimestamps: true);
+            CursorIndicator.Restore();
+
+            // Start highlighting if we have timestamps and window is open
+            if (result.Timestamps != null && _readerWindow is { IsLoaded: true })
+            {
+                Log.Info($"Starting highlighting with {result.Timestamps.Count} timestamps");
+                _readerWindow.StartHighlighting(result.Timestamps, () => _audioPlayer?.CurrentPositionSeconds ?? 0);
+            }
+
+            _audioPlayer!.Play(result.Audio);
+            _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+        }
+        catch (Exception ex)
+        {
+            CursorIndicator.Restore();
+            Log.Error("TTS with highlighting failed", ex);
+            _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
+            _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
     }
 
     private async Task PerformTtsForText(string text)

@@ -13,9 +13,8 @@ public class AppSettings
     public string Voice { get; set; } = "af_heart";
 
     // Reader View settings
-    public bool ReaderViewEnabled { get; set; } = true;
+    public bool ShowReaderWindow { get; set; } = true;
     public bool ReaderAutoPlay { get; set; } = true;
-    public int DoublePressTimeoutMs { get; set; } = 500;
     public string ReaderFontFamily { get; set; } = "Segoe UI";
     public int ReaderFontSize { get; set; } = 18;
     public bool ReaderDarkMode { get; set; } = false;

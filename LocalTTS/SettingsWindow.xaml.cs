@@ -22,7 +22,7 @@ public partial class SettingsWindow : Window
         AutoStopBox.IsChecked = settings.AutoStopContainer;
 
         // Reader View settings
-        ReaderEnabledBox.IsChecked = settings.ReaderViewEnabled;
+        ShowReaderWindowBox.IsChecked = settings.ShowReaderWindow;
         ReaderAutoPlayBox.IsChecked = settings.ReaderAutoPlay;
         ReaderDarkModeBox.IsChecked = settings.ReaderDarkMode;
         ReaderFontSizeBox.Text = settings.ReaderFontSize.ToString();
@@ -65,7 +65,7 @@ public partial class SettingsWindow : Window
         _settings.AutoStopContainer = AutoStopBox.IsChecked == true;
 
         // Reader View settings
-        _settings.ReaderViewEnabled = ReaderEnabledBox.IsChecked == true;
+        _settings.ShowReaderWindow = ShowReaderWindowBox.IsChecked == true;
         _settings.ReaderAutoPlay = ReaderAutoPlayBox.IsChecked == true;
         _settings.ReaderDarkMode = ReaderDarkModeBox.IsChecked == true;
         _settings.ReaderFontSize = fontSize;

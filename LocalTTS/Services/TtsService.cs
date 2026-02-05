@@ -4,6 +4,10 @@ using System.Text.Json;
 
 namespace LocalTTS.Services;
 
+public record WordTimestamp(string Word, double StartTime, double EndTime);
+
+public record TtsResult(byte[] Audio, List<WordTimestamp>? Timestamps = null);
+
 public class TtsService
 {
     private readonly HttpClient _client = new() { Timeout = TimeSpan.FromSeconds(60) };
@@ -16,20 +20,106 @@ public class TtsService
 
     public async Task<byte[]> SynthesizeAsync(string text)
     {
-        var payload = new
+        var result = await SynthesizeWithTimestampsAsync(text, includeTimestamps: false);
+        return result.Audio;
+    }
+
+    public async Task<TtsResult> SynthesizeWithTimestampsAsync(string text, bool includeTimestamps = true)
+    {
+        if (!includeTimestamps)
         {
-            model = "kokoro",
-            voice = _settings.Voice,
-            input = text
-        };
+            // Use standard endpoint
+            var payload = new
+            {
+                model = "kokoro",
+                voice = _settings.Voice,
+                input = text
+            };
 
-        var json = JsonSerializer.Serialize(payload);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-        var url = $"http://localhost:{_settings.Port}/v1/audio/speech";
-        var response = await _client.PostAsync(url, content);
-        response.EnsureSuccessStatusCode();
+            var url = $"http://localhost:{_settings.Port}/v1/audio/speech";
+            var response = await _client.PostAsync(url, content);
+            response.EnsureSuccessStatusCode();
 
-        return await response.Content.ReadAsByteArrayAsync();
+            var audio = await response.Content.ReadAsByteArrayAsync();
+            return new TtsResult(audio);
+        }
+        else
+        {
+            // Use captioned speech endpoint for timestamps
+            var payload = new
+            {
+                model = "kokoro",
+                voice = _settings.Voice,
+                input = text,
+                response_format = "mp3"
+            };
+
+            var json = JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            var url = $"http://localhost:{_settings.Port}/dev/captioned_speech";
+            var response = await _client.PostAsync(url, content);
+            response.EnsureSuccessStatusCode();
+
+            var responseText = await response.Content.ReadAsStringAsync();
+
+            // API may return NDJSON (multiple JSON objects separated by newlines)
+            // We need to parse each line and combine results
+            var lines = responseText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            var audioChunks = new List<byte[]>();
+            var timestamps = new List<WordTimestamp>();
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                using var doc = JsonDocument.Parse(line);
+                var root = doc.RootElement;
+
+                // Collect all audio chunks (base64 encoded)
+                if (root.TryGetProperty("audio", out var audioElement))
+                {
+                    var audioBase64 = audioElement.GetString();
+                    if (!string.IsNullOrEmpty(audioBase64))
+                    {
+                        audioChunks.Add(Convert.FromBase64String(audioBase64));
+                    }
+                }
+
+                // Collect timestamps from all chunks
+                if (root.TryGetProperty("timestamps", out var timestampsElement))
+                {
+                    foreach (var ts in timestampsElement.EnumerateArray())
+                    {
+                        var word = ts.GetProperty("word").GetString()!;
+                        var startTime = ts.GetProperty("start_time").GetDouble();
+                        var endTime = ts.GetProperty("end_time").GetDouble();
+                        timestamps.Add(new WordTimestamp(word, startTime, endTime));
+                    }
+                }
+            }
+
+            if (audioChunks.Count == 0)
+            {
+                throw new InvalidOperationException("No audio data received from captioned speech endpoint");
+            }
+
+            // Concatenate all audio chunks
+            var totalLength = audioChunks.Sum(c => c.Length);
+            var audio = new byte[totalLength];
+            var offset = 0;
+            foreach (var chunk in audioChunks)
+            {
+                Buffer.BlockCopy(chunk, 0, audio, offset, chunk.Length);
+                offset += chunk.Length;
+            }
+
+            Log.Info($"Captioned speech: {audioChunks.Count} chunks, {audio.Length} bytes, {timestamps.Count} timestamps");
+            return new TtsResult(audio, timestamps);
+        }
     }
 }
