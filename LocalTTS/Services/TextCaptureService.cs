@@ -3,8 +3,7 @@ using System.Windows;
 
 namespace LocalTTS.Services;
 
-public static class TextCaptureService
-{
+public static class TextCaptureService {
     [DllImport("user32.dll")]
     private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
@@ -20,8 +19,7 @@ public static class TextCaptureService
     private const byte VK_C = 0x43;
     private const uint KEYEVENTF_KEYUP = 0x0002;
 
-    public static string? CaptureSelectedText()
-    {
+    public static string? CaptureSelectedText() {
         var hwnd = GetForegroundWindow();
         Log.Info($"Foreground window: {hwnd}");
 
@@ -31,13 +29,13 @@ public static class TextCaptureService
         keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
 
         // Poll until modifiers are confirmed released (max 500ms)
-        for (int i = 0; i < 50; i++)
-        {
+        for (var i = 0; i < 50; i++) {
             Thread.Sleep(10);
-            bool ctrlHeld = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
-            bool shiftHeld = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
-            if (!ctrlHeld && !shiftHeld)
+            var ctrlHeld = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
+            var shiftHeld = (GetAsyncKeyState(VK_SHIFT) & 0x8000) != 0;
+            if (!ctrlHeld && !shiftHeld) {
                 break;
+            }
             // Re-send release in case the physical key is still down
             keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
             keybd_event(VK_SHIFT, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
@@ -49,24 +47,20 @@ public static class TextCaptureService
 
         // Save current clipboard
         string? previousClipboard = null;
-        try
-        {
-            if (Clipboard.ContainsText())
+        try {
+            if (Clipboard.ContainsText()) {
                 previousClipboard = Clipboard.GetText();
+            }
+
             Log.Info($"Previous clipboard: {(previousClipboard != null ? $"{previousClipboard.Length} chars" : "empty")}");
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             Log.Error("Failed to read clipboard", ex);
         }
 
-        try
-        {
+        try {
             Clipboard.SetDataObject(new DataObject(), true);
             Log.Info("Clipboard cleared");
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             Log.Error("Failed to clear clipboard", ex);
         }
 
@@ -84,28 +78,25 @@ public static class TextCaptureService
         Thread.Sleep(300);
 
         string? text = null;
-        try
-        {
+        try {
             var data = Clipboard.GetDataObject();
             var formats = data?.GetFormats() ?? [];
             Log.Info($"Clipboard formats: {string.Join(", ", formats)}");
-            if (Clipboard.ContainsText())
+            if (Clipboard.ContainsText()) {
                 text = Clipboard.GetText();
-        }
-        catch (Exception ex)
-        {
+            }
+        } catch (Exception ex) {
             Log.Error("Failed to read clipboard after copy", ex);
         }
 
         Log.Info($"Captured text: {(text != null ? $"{text.Length} chars" : "null")}");
 
         // Restore previous clipboard
-        try
-        {
-            if (previousClipboard != null)
+        try {
+            if (previousClipboard != null) {
                 Clipboard.SetText(previousClipboard);
-        }
-        catch { }
+            }
+        } catch { }
 
         return text;
     }

@@ -2,12 +2,11 @@ using System.Text.RegularExpressions;
 
 namespace LocalTTS.Services;
 
-public partial class TextProcessor
-{
-    public string Clean(string text)
-    {
-        if (string.IsNullOrWhiteSpace(text))
+public partial class TextProcessor {
+    public static string Clean(string text) {
+        if (string.IsNullOrWhiteSpace(text)) {
             return string.Empty;
+        }
 
         // Normalize line endings to LF
         text = text.Replace("\r\n", "\n").Replace("\r", "\n");
@@ -23,8 +22,7 @@ public partial class TextProcessor
 
         // Trim whitespace from each line
         var lines = text.Split('\n');
-        for (int i = 0; i < lines.Length; i++)
-        {
+        for (var i = 0; i < lines.Length; i++) {
             lines[i] = lines[i].Trim();
         }
         text = string.Join("\n", lines);
@@ -32,8 +30,7 @@ public partial class TextProcessor
         return text.Trim();
     }
 
-    private static string FixEncodingIssues(string text)
-    {
+    private static string FixEncodingIssues(string text) {
         // Smart quotes to regular quotes
         text = text.Replace('\u2018', '\''); // Left single quote
         text = text.Replace('\u2019', '\''); // Right single quote

@@ -3,8 +3,7 @@ using System.Text.Json;
 
 namespace LocalTTS.Services;
 
-public class AppSettings
-{
+public class AppSettings {
     public string DockerImage { get; set; } = "ghcr.io/remsky/kokoro-fastapi-cpu:latest";
     public int Port { get; set; } = 8880;
     public string ContainerName { get; set; } = "localtts-kokoro";
@@ -17,42 +16,32 @@ public class AppSettings
     public bool ReaderAutoPlay { get; set; } = true;
     public string ReaderFontFamily { get; set; } = "Segoe UI";
     public int ReaderFontSize { get; set; } = 18;
-    public bool ReaderDarkMode { get; set; } = false;
+    public bool ReaderDarkMode { get; set; }
 
     private static readonly string SettingsPath = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "settings.json");
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
+    private static readonly JsonSerializerOptions JsonOptions = new() {
         WriteIndented = true
     };
 
-    public static AppSettings Load()
-    {
-        try
-        {
-            if (File.Exists(SettingsPath))
-            {
+    public static AppSettings Load() {
+        try {
+            if (File.Exists(SettingsPath)) {
                 var json = File.ReadAllText(SettingsPath);
                 return JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new();
             }
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             Log.Error("Failed to load settings", ex);
         }
         return new();
     }
 
-    public void Save()
-    {
-        try
-        {
+    public void Save() {
+        try {
             var json = JsonSerializer.Serialize(this, JsonOptions);
             File.WriteAllText(SettingsPath, json);
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             Log.Error("Failed to save settings", ex);
         }
     }
