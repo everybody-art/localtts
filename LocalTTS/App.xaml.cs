@@ -245,13 +245,25 @@ public partial class App : Application
             CursorIndicator.Restore();
 
             // Start highlighting if we have timestamps and window is open
+            _audioPlayer!.Play(result.Audio);
+
             if (result.Timestamps != null && _readerWindow is { IsLoaded: true })
             {
-                Log.Info($"Starting highlighting with {result.Timestamps.Count} timestamps");
-                _readerWindow.StartHighlighting(result.Timestamps, () => _audioPlayer?.CurrentPositionSeconds ?? 0);
-            }
+                var latency = _audioPlayer.OutputLatencySeconds;
+                var duration = _audioPlayer.DurationSeconds;
+                var lastTimestamp = result.Timestamps.Count > 0 ? result.Timestamps[^1].EndTime : 0;
+                var timeScale = (duration > 0 && lastTimestamp > 0) ? lastTimestamp / duration : 1.0;
+                if (timeScale < 0.5) timeScale = 0.5;
+                if (timeScale > 2.0) timeScale = 2.0;
 
-            _audioPlayer!.Play(result.Audio);
+                Log.Info($"Starting highlighting with {result.Timestamps.Count} timestamps (latency {latency:0.###}s, scale {timeScale:0.###})");
+                _readerWindow.StartHighlighting(result.Timestamps, () =>
+                {
+                    var pos = _audioPlayer?.CurrentPositionSeconds ?? 0;
+                    var adjusted = (pos - latency) * timeScale;
+                    return adjusted > 0 ? adjusted : 0;
+                });
+            }
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
         }
         catch (Exception ex)

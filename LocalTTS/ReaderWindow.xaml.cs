@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using LocalTTS.Services;
+using System.Text;
 
 namespace LocalTTS;
 
@@ -25,6 +26,7 @@ public partial class ReaderWindow : Window
     private int _currentHighlightIndex = -1;
     private SolidColorBrush? _highlightBrush;
     private SolidColorBrush? _normalBrush;
+    private List<int>? _timestampRunMap;
 
     public ReaderWindow(string text, AppSettings settings, Action<string>? onPlayRequested = null, Action? onClosed = null)
     {
@@ -102,6 +104,7 @@ public partial class ReaderWindow : Window
         _timestamps = timestamps;
         _getPlaybackPosition = getPlaybackPosition;
         _currentHighlightIndex = -1;
+        _timestampRunMap = BuildTimestampRunMap(timestamps, _wordRuns);
 
         _highlightTimer = new DispatcherTimer
         {
@@ -117,6 +120,7 @@ public partial class ReaderWindow : Window
         _highlightTimer = null;
         _timestamps = null;
         _getPlaybackPosition = null;
+        _timestampRunMap = null;
         ClearHighlight();
     }
 
@@ -138,7 +142,25 @@ public partial class ReaderWindow : Window
             }
         }
 
-        if (newIndex != _currentHighlightIndex)
+        if (newIndex == -1)
+        {
+            ClearHighlight();
+            return;
+        }
+
+        var mappedIndex = newIndex;
+        if (_timestampRunMap != null && newIndex >= 0 && newIndex < _timestampRunMap.Count)
+        {
+            mappedIndex = _timestampRunMap[newIndex];
+        }
+
+        if (mappedIndex == -1)
+        {
+            // Punctuation or unaligned token: keep current highlight
+            return;
+        }
+
+        if (mappedIndex != _currentHighlightIndex)
         {
             // Clear previous highlight
             if (_currentHighlightIndex >= 0 && _currentHighlightIndex < _wordRuns.Count)
@@ -147,12 +169,12 @@ public partial class ReaderWindow : Window
             }
 
             // Apply new highlight
-            if (newIndex >= 0 && newIndex < _wordRuns.Count)
+            if (mappedIndex >= 0 && mappedIndex < _wordRuns.Count)
             {
-                _wordRuns[newIndex].Background = _highlightBrush;
+                _wordRuns[mappedIndex].Background = _highlightBrush;
             }
 
-            _currentHighlightIndex = newIndex;
+            _currentHighlightIndex = mappedIndex;
         }
     }
 
@@ -243,5 +265,56 @@ public partial class ReaderWindow : Window
             _isClosing = true;
             Close();
         }
+    }
+
+    private static List<int> BuildTimestampRunMap(List<WordTimestamp> timestamps, List<Run> runs)
+    {
+        var map = new List<int>(timestamps.Count);
+        var runIndex = 0;
+
+        for (int i = 0; i < timestamps.Count; i++)
+        {
+            var tsNorm = NormalizeToken(timestamps[i].Word);
+            if (string.IsNullOrEmpty(tsNorm))
+            {
+                map.Add(-1);
+                continue;
+            }
+
+            var matched = -1;
+            while (runIndex < runs.Count)
+            {
+                var runNorm = NormalizeToken(runs[runIndex].Text);
+                if (!string.IsNullOrEmpty(runNorm) && runNorm == tsNorm)
+                {
+                    matched = runIndex;
+                    runIndex++;
+                    break;
+                }
+                runIndex++;
+            }
+
+            map.Add(matched);
+        }
+
+        return map;
+    }
+
+    private static string NormalizeToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return string.Empty;
+
+        var sb = new StringBuilder(token.Length);
+        foreach (var ch in token)
+        {
+            var normalized = ch == '\u2019' ? '\'' : ch;
+            if (char.IsLetterOrDigit(normalized) || normalized == '\'' || normalized == '-')
+            {
+                sb.Append(char.ToLowerInvariant(normalized));
+            }
+        }
+
+        return sb.ToString();
     }
 }

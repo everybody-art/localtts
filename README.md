@@ -14,6 +14,7 @@ Double-press **Ctrl+Shift+R** (within 500ms) to open a clean reading window with
 - Auto-plays TTS on open (configurable)
 - Has font size controls (+/-)
 - Supports dark mode
+- Highlights the current word in sync with speech
 - Closes when you click away or press Esc
 
 ## Requirements
@@ -40,6 +41,8 @@ Global hotkey (Ctrl+Shift+R)
   -> Copies selected text via simulated Ctrl+C
   -> POST to Kokoro-FastAPI (localhost:8880)
   -> Plays audio via NAudio
+
+When Reader View is open, the app uses Kokoro's captioned speech endpoint to get word timestamps for synchronized highlighting.
 ```
 
 The app automatically manages the Docker container lifecycle — starting it on launch and stopping it on exit.

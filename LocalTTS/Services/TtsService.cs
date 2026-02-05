@@ -54,7 +54,11 @@ public class TtsService
                 model = "kokoro",
                 voice = _settings.Voice,
                 input = text,
-                response_format = "mp3"
+                response_format = "mp3",
+                normalization_options = new
+                {
+                    normalize = false
+                }
             };
 
             var json = JsonSerializer.Serialize(payload);

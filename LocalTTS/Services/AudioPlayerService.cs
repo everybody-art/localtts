@@ -8,7 +8,14 @@ public class AudioPlayerService
     private WaveOutEvent? _waveOut;
     private WaveStream? _waveStream;
 
+    private const int DesiredLatencyMs = 120;
+    private const int NumberOfBuffers = 2;
+
+    public double OutputLatencySeconds => (_waveOut?.DesiredLatency ?? DesiredLatencyMs) / 1000.0;
+
     public bool IsPlaying => _waveOut?.PlaybackState == PlaybackState.Playing;
+
+    public double DurationSeconds => _waveStream?.TotalTime.TotalSeconds ?? 0;
 
     public double CurrentPositionSeconds
     {
@@ -30,7 +37,11 @@ public class AudioPlayerService
 
         var ms = new MemoryStream(audioData);
         _waveStream = new Mp3FileReader(ms);
-        _waveOut = new WaveOutEvent();
+        _waveOut = new WaveOutEvent
+        {
+            DesiredLatency = DesiredLatencyMs,
+            NumberOfBuffers = NumberOfBuffers
+        };
         _waveOut.Init(_waveStream);
         _waveOut.PlaybackStopped += OnPlaybackStopped;
         _waveOut.Play();
