@@ -52,6 +52,7 @@ public class HotkeyService
     {
         if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID)
         {
+            Log.Info("WM_HOTKEY received");
             HotkeyPressed?.Invoke();
             handled = true;
         }
