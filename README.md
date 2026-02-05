@@ -8,6 +8,14 @@ A Windows system tray app that reads highlighted text aloud using [Kokoro TTS](h
 2. Press **Ctrl+Shift+R** to hear it spoken (cursor shows arrow+hourglass while generating)
 3. Press **Ctrl+Shift+R** again to stop playback
 
+### Reader View
+
+Double-press **Ctrl+Shift+R** (within 500ms) to open a clean reading window with the selected text. The window:
+- Auto-plays TTS on open (configurable)
+- Has font size controls (+/-)
+- Supports dark mode
+- Closes when you click away or press Esc
+
 ## Requirements
 
 - Windows 10/11
@@ -48,6 +56,11 @@ Right-click the tray icon → **Settings...** to configure:
 | Voice | `af_heart` | Kokoro voice ID |
 | Auto-start container | On | Start the Docker container on app launch |
 | Auto-stop container | On | Stop the Docker container on app exit |
+| Enable Reader View | On | Allow double-press to open reader window |
+| Reader Auto-play | On | Auto-play TTS when reader opens |
+| Reader Dark Mode | Off | Use dark theme for reader window |
+| Reader Font | Segoe UI | Font family for reader text |
+| Reader Font Size | 18 | Font size for reader text (10-36) |
 
 Settings are saved to `settings.json` next to the executable.
 

@@ -12,6 +12,14 @@ public class AppSettings
     public bool AutoStopContainer { get; set; } = true;
     public string Voice { get; set; } = "af_heart";
 
+    // Reader View settings
+    public bool ReaderViewEnabled { get; set; } = true;
+    public bool ReaderAutoPlay { get; set; } = true;
+    public int DoublePressTimeoutMs { get; set; } = 500;
+    public string ReaderFontFamily { get; set; } = "Segoe UI";
+    public int ReaderFontSize { get; set; } = 18;
+    public bool ReaderDarkMode { get; set; } = false;
+
     private static readonly string SettingsPath = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "settings.json");
 
