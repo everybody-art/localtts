@@ -4,21 +4,19 @@ using LocalTTS.Services;
 
 namespace LocalTTS;
 
-public partial class App : Application
-{
+public partial class App : Application {
     private TaskbarIcon? _trayIcon;
     private HotkeyService? _hotkeyService;
     private AudioPlayerService? _audioPlayer;
     private TtsService? _ttsService;
     private DockerService? _dockerService;
     private AppSettings _settings = new();
-    private bool _isProcessing;
+    private CancellationTokenSource? _ttsCts;
 
     // Reader View state
     private ReaderWindow? _readerWindow;
 
-    protected override async void OnStartup(StartupEventArgs e)
-    {
+    protected override async void OnStartup(StartupEventArgs e) {
         base.OnStartup(e);
         Log.Info("App starting...");
 
@@ -28,23 +26,20 @@ public partial class App : Application
         _ttsService = new TtsService(_settings);
         _dockerService = new DockerService(_settings);
 
-        _trayIcon = new TaskbarIcon
-        {
+        _trayIcon = new TaskbarIcon {
             ToolTipText = "LocalTTS - Starting...",
             MenuActivation = PopupActivationMode.RightClick,
             ContextMenu = CreateContextMenu()
         };
 
         // Try to load icon
-        try
-        {
+        try {
             var iconUri = new Uri("pack://application:,,,/Resources/icon.ico");
             var iconStream = GetResourceStream(iconUri)?.Stream;
-            if (iconStream != null)
+            if (iconStream != null) {
                 _trayIcon.Icon = new System.Drawing.Icon(iconStream);
-        }
-        catch
-        {
+            }
+        } catch {
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
         }
 
@@ -53,23 +48,19 @@ public partial class App : Application
         _hotkeyService.Register();
 
         _trayIcon.ToolTipText = "LocalTTS - Starting Kokoro...";
-        try
-        {
+        try {
             await _dockerService.EnsureRunningAsync();
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
             _trayIcon.ShowBalloonTip("LocalTTS", "Ready! Highlight text and press Ctrl+Shift+R", BalloonIcon.Info);
             Log.Info("Startup complete - ready");
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             Log.Error("Docker startup failed", ex);
             _trayIcon.ToolTipText = "LocalTTS - Docker error";
             _trayIcon.ShowBalloonTip("LocalTTS", $"Docker error: {ex.Message}", BalloonIcon.Error);
         }
     }
 
-    private System.Windows.Controls.ContextMenu CreateContextMenu()
-    {
+    private System.Windows.Controls.ContextMenu CreateContextMenu() {
         var menu = new System.Windows.Controls.ContextMenu();
 
         var settingsItem = new System.Windows.Controls.MenuItem { Header = "Settings..." };
@@ -95,10 +86,8 @@ public partial class App : Application
 
     private LogWindow? _logWindow;
 
-    private void OpenLog()
-    {
-        if (_logWindow is { IsLoaded: true })
-        {
+    private void OpenLog() {
+        if (_logWindow is { IsLoaded: true }) {
             _logWindow.Activate();
             return;
         }
@@ -106,98 +95,79 @@ public partial class App : Application
         _logWindow.Show();
     }
 
-    private void OpenSettings()
-    {
+    private void OpenSettings() {
         var window = new SettingsWindow(_settings);
-        if (window.ShowDialog() == true)
-        {
+        if (window.ShowDialog() == true) {
             _ttsService = new TtsService(_settings);
             _dockerService = new DockerService(_settings);
             Log.Info("Settings updated");
         }
     }
 
-    private async void OnHotkeyPressed()
-    {
+    private async void OnHotkeyPressed() {
         // If audio is playing, stop it regardless of double-press
-        if (_audioPlayer?.IsPlaying == true)
-        {
+        if (_audioPlayer?.IsPlaying == true) {
             _audioPlayer.Stop();
             return;
         }
 
         Log.Info($"Hotkey pressed. ShowReaderWindow: {_settings.ShowReaderWindow}");
 
-        if (_settings.ShowReaderWindow)
-        {
+        if (_settings.ShowReaderWindow) {
             // Open reader window with highlighting
             OpenReaderView();
-        }
-        else
-        {
+        } else {
             // TTS without window
             Log.Info("Reader window disabled - TTS only");
             await PerformTts();
         }
     }
 
-    private async Task PerformTts()
-    {
-        if (_isProcessing) return;
-        _isProcessing = true;
+    private async Task PerformTts() {
+        _ttsCts?.Cancel();
+        _ttsCts = new CancellationTokenSource();
+        var ct = _ttsCts.Token;
 
-        try
-        {
+        try {
             var text = TextCaptureService.CaptureSelectedText();
-            if (string.IsNullOrWhiteSpace(text))
-            {
+            if (string.IsNullOrWhiteSpace(text)) {
                 _trayIcon?.ShowBalloonTip("LocalTTS", "No text selected", BalloonIcon.Warning);
                 return;
             }
 
             _trayIcon!.ToolTipText = "LocalTTS - Generating...";
             CursorIndicator.ShowBusy();
-            var audioData = await _ttsService!.SynthesizeAsync(text);
+            var audioData = await _ttsService!.SynthesizeAsync(text, ct);
             CursorIndicator.Restore();
             _audioPlayer!.Play(audioData);
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
-        }
-        catch (Exception ex)
-        {
+        } catch (OperationCanceledException) {
+            CursorIndicator.Restore();
+        } catch (Exception ex) {
             CursorIndicator.Restore();
             _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
             _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
         }
-        finally
-        {
-            _isProcessing = false;
-        }
     }
 
-    private void OpenReaderView()
-    {
+    private void OpenReaderView() {
         Log.Info("OpenReaderView called");
         var text = TextCaptureService.CaptureSelectedText();
-        if (string.IsNullOrWhiteSpace(text))
-        {
+        if (string.IsNullOrWhiteSpace(text)) {
             Log.Info("No text selected for reader");
             _trayIcon?.ShowBalloonTip("LocalTTS", "No text selected", BalloonIcon.Warning);
             return;
         }
 
         Log.Info($"Reader text captured: {text.Length} chars");
-        var processor = new TextProcessor();
-        var cleanedText = processor.Clean(text);
+        var cleanedText = TextProcessor.Clean(text);
 
         // Reuse or create window
-        if (_readerWindow is { IsLoaded: true })
-        {
+        if (_readerWindow is { IsLoaded: true }) {
             Log.Info("Reusing existing reader window");
             _readerWindow.UpdateText(cleanedText);
             _readerWindow.Activate();
-        }
-        else
-        {
+        } else {
             Log.Info("Creating new reader window");
             _readerWindow = new ReaderWindow(cleanedText, _settings, OnReaderPlayRequested, OnReaderClosed);
             _readerWindow.Show();
@@ -205,114 +175,78 @@ public partial class App : Application
         }
 
         // Auto-play if enabled
-        if (_settings.ReaderAutoPlay)
-        {
+        if (_settings.ReaderAutoPlay) {
             Log.Info("Auto-playing TTS with highlighting");
             _audioPlayer?.Stop();
             _ = PerformTtsWithHighlighting(cleanedText);
         }
     }
 
-    private void OnReaderPlayRequested(string text)
-    {
+    private void OnReaderPlayRequested(string text) {
         _audioPlayer?.Stop();
         _ = PerformTtsWithHighlighting(text);
     }
 
-    private void OnReaderClosed()
-    {
-        _audioPlayer?.Stop();
-    }
+    private void OnReaderClosed() => _audioPlayer?.Stop();
 
-    private void OnPlaybackStopped()
-    {
+    private void OnPlaybackStopped() =>
         // Stop highlighting when playback ends
         _readerWindow?.StopHighlighting();
-    }
 
-    private async Task PerformTtsWithHighlighting(string text)
-    {
-        if (_isProcessing) return;
-        _isProcessing = true;
+    private async Task PerformTtsWithHighlighting(string text) {
+        _ttsCts?.Cancel();
+        _ttsCts = new CancellationTokenSource();
+        var ct = _ttsCts.Token;
 
-        try
-        {
+        try {
             _trayIcon!.ToolTipText = "LocalTTS - Generating...";
             CursorIndicator.ShowBusy();
 
             // Get audio with timestamps for highlighting
-            var result = await _ttsService!.SynthesizeWithTimestampsAsync(text, includeTimestamps: true);
+            var result = await _ttsService!.SynthesizeWithTimestampsAsync(text, includeTimestamps: true, ct);
             CursorIndicator.Restore();
 
             // Start highlighting if we have timestamps and window is open
             _audioPlayer!.Play(result.Audio);
 
-            if (result.Timestamps != null && _readerWindow is { IsLoaded: true })
-            {
+            if (result.Timestamps != null && _readerWindow is { IsLoaded: true }) {
                 var latency = _audioPlayer.OutputLatencySeconds;
                 var duration = _audioPlayer.DurationSeconds;
                 var lastTimestamp = result.Timestamps.Count > 0 ? result.Timestamps[^1].EndTime : 0;
                 var timeScale = (duration > 0 && lastTimestamp > 0) ? lastTimestamp / duration : 1.0;
-                if (timeScale < 0.5) timeScale = 0.5;
-                if (timeScale > 2.0) timeScale = 2.0;
+                if (timeScale < 0.5) {
+                    timeScale = 0.5;
+                }
+
+                if (timeScale > 2.0) {
+                    timeScale = 2.0;
+                }
 
                 Log.Info($"Starting highlighting with {result.Timestamps.Count} timestamps (latency {latency:0.###}s, scale {timeScale:0.###})");
-                _readerWindow.StartHighlighting(result.Timestamps, () =>
-                {
+                _readerWindow.StartHighlighting(result.Timestamps, () => {
                     var pos = _audioPlayer?.CurrentPositionSeconds ?? 0;
                     var adjusted = (pos - latency) * timeScale;
                     return adjusted > 0 ? adjusted : 0;
                 });
             }
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
-        }
-        catch (Exception ex)
-        {
+        } catch (OperationCanceledException) {
+            CursorIndicator.Restore();
+        } catch (Exception ex) {
             CursorIndicator.Restore();
             Log.Error("TTS with highlighting failed", ex);
             _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
             _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
         }
-        finally
-        {
-            _isProcessing = false;
-        }
     }
 
-    private async Task PerformTtsForText(string text)
-    {
-        if (_isProcessing) return;
-        _isProcessing = true;
-
-        try
-        {
-            _trayIcon!.ToolTipText = "LocalTTS - Generating...";
-            CursorIndicator.ShowBusy();
-            var audioData = await _ttsService!.SynthesizeAsync(text);
-            CursorIndicator.Restore();
-            _audioPlayer!.Play(audioData);
-            _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
-        }
-        catch (Exception ex)
-        {
-            CursorIndicator.Restore();
-            _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
-            _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
-        }
-        finally
-        {
-            _isProcessing = false;
-        }
-    }
-
-    protected override async void OnExit(ExitEventArgs e)
-    {
+    protected override async void OnExit(ExitEventArgs e) {
+        _ttsCts?.Cancel();
         _hotkeyService?.Unregister();
         _audioPlayer?.Stop();
         _trayIcon?.Dispose();
 
-        if (_dockerService != null)
-        {
+        if (_dockerService != null) {
             try { await _dockerService.StopAsync(); } catch { }
         }
 

@@ -4,20 +4,17 @@ using LocalTTS.Services;
 
 namespace LocalTTS;
 
-public partial class LogWindow : Window
-{
-    public LogWindow()
-    {
+public partial class LogWindow : Window {
+    public LogWindow() {
         InitializeComponent();
 
         // Load existing log file
         var logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "localtts.log");
-        try
-        {
-            if (File.Exists(logPath))
+        try {
+            if (File.Exists(logPath)) {
                 LogText.Text = File.ReadAllText(logPath);
-        }
-        catch { }
+            }
+        } catch { }
 
         LogText.ScrollToEnd();
 
@@ -25,17 +22,10 @@ public partial class LogWindow : Window
         Closed += (_, _) => Log.LineWritten -= OnLineWritten;
     }
 
-    private void OnLineWritten(string line)
-    {
-        Dispatcher.BeginInvoke(() =>
-        {
-            LogText.AppendText(line + Environment.NewLine);
-            LogText.ScrollToEnd();
-        });
-    }
+    private void OnLineWritten(string line) => Dispatcher.BeginInvoke(() => {
+        LogText.AppendText(line + Environment.NewLine);
+        LogText.ScrollToEnd();
+    });
 
-    private void OnClear(object sender, RoutedEventArgs e)
-    {
-        LogText.Clear();
-    }
+    private void OnClear(object sender, RoutedEventArgs e) => LogText.Clear();
 }

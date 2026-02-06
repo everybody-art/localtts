@@ -22,7 +22,7 @@ When Reader View is enabled, pressing **Ctrl+Shift+R** opens a clean reading win
 ## Requirements
 
 - Windows 10/11
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - For GPU acceleration: NVIDIA GPU with [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 
@@ -40,7 +40,7 @@ On first launch the app will pull and start the Kokoro TTS Docker container. Thi
 
 ```
 Global hotkey (Ctrl+Shift+R)
-  -> Copies selected text via simulated Ctrl+C
+  -> Reads selected text via UI Automation (clipboard fallback)
   -> If Reader View is enabled: open reader window
   -> POST to Kokoro-FastAPI (localhost:8880)
   -> If Reader View is open: use captioned speech for word timestamps

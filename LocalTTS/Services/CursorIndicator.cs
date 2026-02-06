@@ -2,8 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace LocalTTS.Services;
 
-public static class CursorIndicator
-{
+public static class CursorIndicator {
     private const uint OCR_APPSTARTING = 32650; // Arrow + hourglass
     private const uint OCR_NORMAL = 32512;
     private const uint IMAGE_CURSOR = 2;
@@ -23,26 +22,19 @@ public static class CursorIndicator
 
     private const uint SPI_SETCURSORS = 0x0057;
 
-    public static void ShowBusy()
-    {
-        try
-        {
+    public static void ShowBusy() {
+        try {
             var busyCursor = LoadImage(IntPtr.Zero, OCR_APPSTARTING, IMAGE_CURSOR, 0, 0, LR_SHARED);
-            if (busyCursor != IntPtr.Zero)
-            {
+            if (busyCursor != IntPtr.Zero) {
                 var copy = CopyIcon(busyCursor);
                 SetSystemCursor(copy, OCR_NORMAL);
             }
-        }
-        catch { }
+        } catch { }
     }
 
-    public static void Restore()
-    {
-        try
-        {
+    public static void Restore() {
+        try {
             SystemParametersInfo(SPI_SETCURSORS, 0, IntPtr.Zero, 0);
-        }
-        catch { }
+        } catch { }
     }
 }
