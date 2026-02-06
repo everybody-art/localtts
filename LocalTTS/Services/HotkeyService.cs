@@ -17,13 +17,15 @@ public class HotkeyService {
     [DllImport("user32.dll")]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    private Window? _messageWindow;
     private HwndSource? _source;
     private IntPtr _windowHandle;
 
     public event Action? HotkeyPressed;
 
     public void Register() {
-        var helper = new WindowInteropHelper(new Window { Width = 0, Height = 0, WindowStyle = WindowStyle.None, ShowInTaskbar = false, ShowActivated = false });
+        _messageWindow = new Window { Width = 0, Height = 0, WindowStyle = WindowStyle.None, ShowInTaskbar = false, ShowActivated = false };
+        var helper = new WindowInteropHelper(_messageWindow);
         helper.EnsureHandle();
         _windowHandle = helper.Handle;
 

@@ -42,19 +42,25 @@ public partial class ReaderWindow : Window {
         ApplyTheme();
         UpdateText(text);
 
-        // Only close on deactivate AFTER window has been activated once
         Activated += OnActivated;
         Deactivated += OnDeactivated;
         Closed += OnWindowClosed;
         KeyDown += OnKeyDown;
     }
 
+    private void OnActivated(object? sender, EventArgs e) => _hasBeenActivated = true;
+
+    private void OnDeactivated(object? sender, EventArgs e) {
+        if (_settings.ReaderCloseOnFocusLoss && _hasBeenActivated && !_isClosing) {
+            _isClosing = true;
+            Close();
+        }
+    }
+
     private void OnWindowClosed(object? sender, EventArgs e) {
         StopHighlighting();
         _onClosed?.Invoke();
     }
-
-    private void OnActivated(object? sender, EventArgs e) => _hasBeenActivated = true;
 
     private void OnToolbarMouseDown(object sender, MouseButtonEventArgs e) {
         if (e.ChangedButton == MouseButton.Left) {
@@ -209,14 +215,6 @@ public partial class ReaderWindow : Window {
 
     private void OnClose(object sender, RoutedEventArgs e) {
         if (!_isClosing) {
-            _isClosing = true;
-            Close();
-        }
-    }
-
-    private void OnDeactivated(object? sender, EventArgs e) {
-        // Only close if we've been activated at least once and not already closing
-        if (_hasBeenActivated && !_isClosing) {
             _isClosing = true;
             Close();
         }

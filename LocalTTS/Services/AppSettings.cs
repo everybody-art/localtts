@@ -14,6 +14,7 @@ public class AppSettings {
     // Reader View settings
     public bool ShowReaderWindow { get; set; } = true;
     public bool ReaderAutoPlay { get; set; } = true;
+    public bool ReaderCloseOnFocusLoss { get; set; }
     public string ReaderFontFamily { get; set; } = "Segoe UI";
     public int ReaderFontSize { get; set; } = 18;
     public bool ReaderDarkMode { get; set; }

@@ -23,6 +23,7 @@ public partial class SettingsWindow : Window {
         // Reader View settings
         ShowReaderWindowBox.IsChecked = settings.ShowReaderWindow;
         ReaderAutoPlayBox.IsChecked = settings.ReaderAutoPlay;
+        ReaderCloseOnFocusLossBox.IsChecked = settings.ReaderCloseOnFocusLoss;
         ReaderDarkModeBox.IsChecked = settings.ReaderDarkMode;
         ReaderFontSizeBox.Text = settings.ReaderFontSize.ToString(CultureInfo.InvariantCulture);
 
@@ -62,6 +63,7 @@ public partial class SettingsWindow : Window {
         // Reader View settings
         _settings.ShowReaderWindow = ShowReaderWindowBox.IsChecked == true;
         _settings.ReaderAutoPlay = ReaderAutoPlayBox.IsChecked == true;
+        _settings.ReaderCloseOnFocusLoss = ReaderCloseOnFocusLossBox.IsChecked == true;
         _settings.ReaderDarkMode = ReaderDarkModeBox.IsChecked == true;
         _settings.ReaderFontSize = fontSize;
         _settings.ReaderFontFamily = (ReaderFontBox.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Segoe UI";

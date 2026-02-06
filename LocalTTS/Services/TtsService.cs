@@ -12,12 +12,12 @@ public sealed class TtsService(AppSettings settings) : IDisposable {
     private readonly HttpClient _client = new() { Timeout = TimeSpan.FromSeconds(60) };
     private readonly AppSettings _settings = settings;
 
-    public async Task<byte[]> SynthesizeAsync(string text) {
-        var result = await SynthesizeWithTimestampsAsync(text, includeTimestamps: false);
+    public async Task<byte[]> SynthesizeAsync(string text, CancellationToken ct = default) {
+        var result = await SynthesizeWithTimestampsAsync(text, includeTimestamps: false, ct);
         return result.Audio;
     }
 
-    public async Task<TtsResult> SynthesizeWithTimestampsAsync(string text, bool includeTimestamps = true) {
+    public async Task<TtsResult> SynthesizeWithTimestampsAsync(string text, bool includeTimestamps = true, CancellationToken ct = default) {
         if (!includeTimestamps) {
             // Use standard endpoint
             var payload = new {
@@ -30,10 +30,10 @@ public sealed class TtsService(AppSettings settings) : IDisposable {
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var url = $"http://localhost:{_settings.Port}/v1/audio/speech";
-            var response = await _client.PostAsync(url, content);
+            var response = await _client.PostAsync(url, content, ct);
             response.EnsureSuccessStatusCode();
 
-            var audio = await response.Content.ReadAsByteArrayAsync();
+            var audio = await response.Content.ReadAsByteArrayAsync(ct);
             return new TtsResult(audio);
         } else {
             // Use captioned speech endpoint for timestamps
@@ -51,10 +51,10 @@ public sealed class TtsService(AppSettings settings) : IDisposable {
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
             var url = $"http://localhost:{_settings.Port}/dev/captioned_speech";
-            var response = await _client.PostAsync(url, content);
+            var response = await _client.PostAsync(url, content, ct);
             response.EnsureSuccessStatusCode();
 
-            var responseText = await response.Content.ReadAsStringAsync();
+            var responseText = await response.Content.ReadAsStringAsync(ct);
 
             // API may return NDJSON (multiple JSON objects separated by newlines)
             // We need to parse each line and combine results

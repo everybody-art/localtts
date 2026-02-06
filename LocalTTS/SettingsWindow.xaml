@@ -49,6 +49,7 @@
 
             <CheckBox x:Name="ShowReaderWindowBox" Content="Show reader window on hotkey" Margin="0,0,0,8"/>
             <CheckBox x:Name="ReaderAutoPlayBox" Content="Auto-play TTS when reader opens" Margin="0,0,0,8"/>
+            <CheckBox x:Name="ReaderCloseOnFocusLossBox" Content="Close reader when it loses focus" Margin="0,0,0,8"/>
             <CheckBox x:Name="ReaderDarkModeBox" Content="Dark mode" Margin="0,0,0,12"/>
 
             <Grid Margin="0,0,0,8">

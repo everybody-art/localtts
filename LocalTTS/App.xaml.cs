@@ -11,7 +11,7 @@ public partial class App : Application {
     private TtsService? _ttsService;
     private DockerService? _dockerService;
     private AppSettings _settings = new();
-    private bool _isProcessing;
+    private CancellationTokenSource? _ttsCts;
 
     // Reader View state
     private ReaderWindow? _readerWindow;
@@ -124,11 +124,9 @@ public partial class App : Application {
     }
 
     private async Task PerformTts() {
-        if (_isProcessing) {
-            return;
-        }
-
-        _isProcessing = true;
+        _ttsCts?.Cancel();
+        _ttsCts = new CancellationTokenSource();
+        var ct = _ttsCts.Token;
 
         try {
             var text = TextCaptureService.CaptureSelectedText();
@@ -139,16 +137,16 @@ public partial class App : Application {
 
             _trayIcon!.ToolTipText = "LocalTTS - Generating...";
             CursorIndicator.ShowBusy();
-            var audioData = await _ttsService!.SynthesizeAsync(text);
+            var audioData = await _ttsService!.SynthesizeAsync(text, ct);
             CursorIndicator.Restore();
             _audioPlayer!.Play(audioData);
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+        } catch (OperationCanceledException) {
+            CursorIndicator.Restore();
         } catch (Exception ex) {
             CursorIndicator.Restore();
             _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
             _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
-        } finally {
-            _isProcessing = false;
         }
     }
 
@@ -196,18 +194,16 @@ public partial class App : Application {
         _readerWindow?.StopHighlighting();
 
     private async Task PerformTtsWithHighlighting(string text) {
-        if (_isProcessing) {
-            return;
-        }
-
-        _isProcessing = true;
+        _ttsCts?.Cancel();
+        _ttsCts = new CancellationTokenSource();
+        var ct = _ttsCts.Token;
 
         try {
             _trayIcon!.ToolTipText = "LocalTTS - Generating...";
             CursorIndicator.ShowBusy();
 
             // Get audio with timestamps for highlighting
-            var result = await _ttsService!.SynthesizeWithTimestampsAsync(text, includeTimestamps: true);
+            var result = await _ttsService!.SynthesizeWithTimestampsAsync(text, includeTimestamps: true, ct);
             CursorIndicator.Restore();
 
             // Start highlighting if we have timestamps and window is open
@@ -234,17 +230,18 @@ public partial class App : Application {
                 });
             }
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
+        } catch (OperationCanceledException) {
+            CursorIndicator.Restore();
         } catch (Exception ex) {
             CursorIndicator.Restore();
             Log.Error("TTS with highlighting failed", ex);
             _trayIcon?.ShowBalloonTip("LocalTTS", $"TTS error: {ex.Message}", BalloonIcon.Error);
             _trayIcon!.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
-        } finally {
-            _isProcessing = false;
         }
     }
 
     protected override async void OnExit(ExitEventArgs e) {
+        _ttsCts?.Cancel();
         _hotkeyService?.Unregister();
         _audioPlayer?.Stop();
         _trayIcon?.Dispose();
