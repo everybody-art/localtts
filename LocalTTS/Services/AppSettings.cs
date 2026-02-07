@@ -19,6 +19,9 @@ public class AppSettings {
     public int ReaderFontSize { get; set; } = 18;
     public bool ReaderDarkMode { get; set; }
 
+    // General
+    public string LogLevel { get; set; } = "Info";
+
     private static readonly string SettingsPath = Path.Combine(
         AppDomain.CurrentDomain.BaseDirectory, "settings.json");
 

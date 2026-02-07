@@ -21,6 +21,8 @@ public partial class App : Application {
         Log.Info("App starting...");
 
         _settings = AppSettings.Load();
+        ApplyLogLevel();
+        Log.RotateIfNeeded();
         _audioPlayer = new AudioPlayerService();
         _audioPlayer.PlaybackStopped += OnPlaybackStopped;
         _ttsService = new TtsService(_settings);
@@ -100,8 +102,14 @@ public partial class App : Application {
         if (window.ShowDialog() == true) {
             _ttsService = new TtsService(_settings);
             _dockerService = new DockerService(_settings);
+            ApplyLogLevel();
             Log.Info("Settings updated");
         }
+    }
+
+    private void ApplyLogLevel() {
+        if (Enum.TryParse<LogLevel>(_settings.LogLevel, ignoreCase: true, out var level))
+            Log.MinLevel = level;
     }
 
     private async void OnHotkeyPressed() {
@@ -111,14 +119,14 @@ public partial class App : Application {
             return;
         }
 
-        Log.Info($"Hotkey pressed. ShowReaderWindow: {_settings.ShowReaderWindow}");
+        Log.Debug($"Hotkey pressed. ShowReaderWindow: {_settings.ShowReaderWindow}");
 
         if (_settings.ShowReaderWindow) {
             // Open reader window with highlighting
             OpenReaderView();
         } else {
             // TTS without window
-            Log.Info("Reader window disabled - TTS only");
+            Log.Debug("Reader window disabled - TTS only");
             await PerformTts();
         }
     }
@@ -151,7 +159,7 @@ public partial class App : Application {
     }
 
     private void OpenReaderView() {
-        Log.Info("OpenReaderView called");
+        Log.Debug("OpenReaderView called");
         var text = TextCaptureService.CaptureSelectedText();
         if (string.IsNullOrWhiteSpace(text)) {
             Log.Info("No text selected for reader");
@@ -159,24 +167,24 @@ public partial class App : Application {
             return;
         }
 
-        Log.Info($"Reader text captured: {text.Length} chars");
+        Log.Debug($"Reader text captured: {text.Length} chars");
         var cleanedText = TextProcessor.Clean(text);
 
         // Reuse or create window
         if (_readerWindow is { IsLoaded: true }) {
-            Log.Info("Reusing existing reader window");
+            Log.Debug("Reusing existing reader window");
             _readerWindow.UpdateText(cleanedText);
             _readerWindow.Activate();
         } else {
-            Log.Info("Creating new reader window");
+            Log.Debug("Creating new reader window");
             _readerWindow = new ReaderWindow(cleanedText, _settings, OnReaderPlayRequested, OnReaderClosed);
             _readerWindow.Show();
-            Log.Info("Reader window shown");
+            Log.Debug("Reader window shown");
         }
 
         // Auto-play if enabled
         if (_settings.ReaderAutoPlay) {
-            Log.Info("Auto-playing TTS with highlighting");
+            Log.Debug("Auto-playing TTS with highlighting");
             _audioPlayer?.Stop();
             _ = PerformTtsWithHighlighting(cleanedText);
         }
@@ -222,7 +230,7 @@ public partial class App : Application {
                     timeScale = 2.0;
                 }
 
-                Log.Info($"Starting highlighting with {result.Timestamps.Count} timestamps (latency {latency:0.###}s, scale {timeScale:0.###})");
+                Log.Debug($"Starting highlighting with {result.Timestamps.Count} timestamps (latency {latency:0.###}s, scale {timeScale:0.###})");
                 _readerWindow.StartHighlighting(result.Timestamps, () => {
                     var pos = _audioPlayer?.CurrentPositionSeconds ?? 0;
                     var adjusted = (pos - latency) * timeScale;
