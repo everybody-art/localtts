@@ -103,7 +103,7 @@ public sealed class TtsService(AppSettings settings) : IDisposable {
                 offset += chunk.Length;
             }
 
-            Log.Info($"Captioned speech: {audioChunks.Count} chunks, {audio.Length} bytes, {timestamps.Count} timestamps");
+            Log.Debug($"Captioned speech: {audioChunks.Count} chunks, {audio.Length} bytes, {timestamps.Count} timestamps");
             return new TtsResult(audio, timestamps);
         }
     }

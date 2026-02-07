@@ -29,17 +29,17 @@ public static class TextCaptureService {
 
     public static string? CaptureSelectedText() {
         var hwnd = GetForegroundWindow();
-        Log.Info($"Foreground window: {hwnd}");
+        Log.Debug($"Foreground window: {hwnd}");
 
         // Tier 1: Try UI Automation (no clipboard side effects)
         var text = TryUiaCapture();
         if (!string.IsNullOrWhiteSpace(text)) {
-            Log.Info($"UIA captured: {text.Length} chars");
+            Log.Debug($"UIA captured: {text.Length} chars");
             return text;
         }
 
         // Tier 2: Fall back to clipboard simulation
-        Log.Info("UIA returned nothing, falling back to clipboard");
+        Log.Debug("UIA returned nothing, falling back to clipboard");
         return TryClipboardCapture();
     }
 
@@ -75,7 +75,7 @@ public static class TextCaptureService {
 
             return null;
         } catch (Exception ex) {
-            Log.Info($"UIA capture failed: {ex.Message}");
+            Log.Debug($"UIA capture failed: {ex.Message}");
             return null;
         }
     }
@@ -100,13 +100,13 @@ public static class TextCaptureService {
 
         var ctrlState = GetAsyncKeyState(VK_CONTROL);
         var shiftState = GetAsyncKeyState(VK_SHIFT);
-        Log.Info($"After release - Ctrl: {ctrlState}, Shift: {shiftState}");
+        Log.Debug($"After release - Ctrl: {ctrlState}, Shift: {shiftState}");
 
         // Record clipboard sequence number BEFORE Ctrl+C (does not open/lock clipboard)
         var seqBefore = GetClipboardSequenceNumber();
 
         // Send Ctrl+C via keybd_event with sufficient delays
-        Log.Info("Sending Ctrl+C via keybd_event...");
+        Log.Debug("Sending Ctrl+C via keybd_event...");
         keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
         Thread.Sleep(60);
         keybd_event(VK_C, 0, 0, UIntPtr.Zero);
@@ -125,10 +125,10 @@ public static class TextCaptureService {
             }
         }
 
-        Log.Info($"Clipboard changed: {clipboardChanged} (seq: {GetClipboardSequenceNumber()})");
+        Log.Debug($"Clipboard changed: {clipboardChanged} (seq: {GetClipboardSequenceNumber()})");
 
         if (!clipboardChanged) {
-            Log.Info("Ctrl+C did not update clipboard - nothing selected");
+            Log.Debug("Ctrl+C did not update clipboard - nothing selected");
             return null;
         }
 
@@ -141,12 +141,12 @@ public static class TextCaptureService {
             try {
                 if (Clipboard.ContainsText()) {
                     text = Clipboard.GetText();
-                    Log.Info($"Clipboard read on attempt {attempt + 1}: {text?.Length ?? 0} chars");
+                    Log.Debug($"Clipboard read on attempt {attempt + 1}: {text?.Length ?? 0} chars");
                     break;
                 }
                 var data = Clipboard.GetDataObject();
                 var formats = data?.GetFormats() ?? [];
-                Log.Info($"Clipboard formats (attempt {attempt + 1}): {string.Join(", ", formats)}");
+                Log.Debug($"Clipboard formats (attempt {attempt + 1}): {string.Join(", ", formats)}");
                 break;
             } catch (Exception ex) {
                 var holder = GetOpenClipboardWindow();
@@ -155,7 +155,7 @@ public static class TextCaptureService {
             }
         }
 
-        Log.Info($"Captured text: {(text != null ? $"{text.Length} chars" : "null")}");
+        Log.Debug($"Captured text: {(text != null ? $"{text.Length} chars" : "null")}");
         return text;
     }
 }

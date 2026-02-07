@@ -58,7 +58,8 @@ Right-click the tray icon → **Settings...** to configure:
 | Docker Image | `ghcr.io/remsky/kokoro-fastapi-cpu:latest` | Use `ghcr.io/remsky/kokoro-fastapi-gpu:latest` for GPU acceleration |
 | Port | `8880` | Local port for the Kokoro API |
 | Container Name | `localtts-kokoro` | Docker container name |
-| Voice | `af_heart` | Kokoro voice ID |
+| Voice | `af_heart` | Kokoro voice ID (selectable list with preview) |
+| Log Level | Info | Minimum log level to record |
 | Auto-start container | On | Start the Docker container on app launch |
 | Auto-stop container | On | Stop the Docker container on app exit |
 | Enable Reader View | On | Show reader window on hotkey (when off, hotkey plays audio only) |
@@ -77,3 +78,9 @@ Common issues:
 - **"Starting Kokoro..." stays forever**: Check that Docker Desktop is running and `docker ps` works from your terminal
 - **"No text selected"**: Make sure you have text highlighted before pressing the hotkey
 - **No tray icon visible**: Check the system tray overflow area (^ arrow in taskbar)
+
+## Contributing
+
+Contributions are welcome! One of the biggest goals for this project is making it easier to set up and use for everyone — if that's something you're interested in helping with, we'd love the input.
+
+Feel free to open an issue to report bugs or suggest features, or submit a pull request if you'd like to contribute directly. All skill levels are welcome.

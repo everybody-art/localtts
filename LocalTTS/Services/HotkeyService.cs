@@ -47,7 +47,7 @@ public class HotkeyService {
 
     private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) {
         if (msg == WM_HOTKEY && wParam.ToInt32() == HOTKEY_ID) {
-            Log.Info("WM_HOTKEY received");
+            Log.Debug("WM_HOTKEY received");
             HotkeyPressed?.Invoke();
             handled = true;
         }

@@ -14,7 +14,7 @@ public class DockerService(AppSettings settings) {
 
         Log.Info("Checking container status...");
         var (exitCode, output) = await RunDockerAsync($"inspect -f \"{{{{.State.Running}}}}\" {_settings.ContainerName}");
-        Log.Info($"inspect exit={exitCode}, output={output.Trim()}");
+        Log.Debug($"inspect exit={exitCode}, output={output.Trim()}");
 
         if (exitCode == 0 && output.Trim() == "true") {
             Log.Info("Container already running");
@@ -24,14 +24,14 @@ public class DockerService(AppSettings settings) {
         if (exitCode == 0) {
             Log.Info("Starting existing container...");
             var (startExit, startOut) = await RunDockerAsync($"start {_settings.ContainerName}");
-            Log.Info($"start exit={startExit}, output={startOut.Trim()}");
+            Log.Debug($"start exit={startExit}, output={startOut.Trim()}");
         } else {
             Log.Info("Creating new container...");
             var gpuFlag = _settings.DockerImage.Contains("gpu", StringComparison.OrdinalIgnoreCase)
                 ? "--gpus all " : "";
             var (runExit, runOut) = await RunDockerAsync(
                 $"run -d {gpuFlag}--name {_settings.ContainerName} -p {_settings.Port}:8880 {_settings.DockerImage}");
-            Log.Info($"run exit={runExit}, output={runOut.Trim()}");
+            Log.Debug($"run exit={runExit}, output={runOut.Trim()}");
         }
 
         Log.Info("Waiting for API to be ready...");
@@ -39,13 +39,13 @@ public class DockerService(AppSettings settings) {
         for (var i = 0; i < 60; i++) {
             try {
                 var response = await client.GetAsync($"http://localhost:{_settings.Port}/v1/models");
-                Log.Info($"Health check {i + 1}: {response.StatusCode}");
+                Log.Debug($"Health check {i + 1}: {response.StatusCode}");
                 if (response.IsSuccessStatusCode) {
                     Log.Info("API is ready!");
                     return;
                 }
             } catch (Exception ex) {
-                Log.Info($"Health check {i + 1}: {ex.GetType().Name} - {ex.Message}");
+                Log.Debug($"Health check {i + 1}: {ex.GetType().Name} - {ex.Message}");
             }
             await Task.Delay(2000);
         }
@@ -64,7 +64,7 @@ public class DockerService(AppSettings settings) {
     }
 
     private static async Task<(int ExitCode, string Output)> RunDockerAsync(string arguments) {
-        Log.Info($"Running: docker {arguments}");
+        Log.Debug($"Running: docker {arguments}");
         var psi = new ProcessStartInfo {
             FileName = "docker",
             Arguments = arguments,
@@ -80,7 +80,7 @@ public class DockerService(AppSettings settings) {
         await process.WaitForExitAsync();
 
         if (!string.IsNullOrWhiteSpace(stderr)) {
-            Log.Info($"stderr: {stderr.Trim()}");
+            Log.Debug($"stderr: {stderr.Trim()}");
         }
 
         return (process.ExitCode, stdout);
