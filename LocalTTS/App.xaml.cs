@@ -108,8 +108,9 @@ public partial class App : Application {
     }
 
     private void ApplyLogLevel() {
-        if (Enum.TryParse<LogLevel>(_settings.LogLevel, ignoreCase: true, out var level))
+        if (Enum.TryParse<LogLevel>(_settings.LogLevel, ignoreCase: true, out var level)) {
             Log.MinLevel = level;
+        }
     }
 
     private async void OnHotkeyPressed() {
@@ -186,13 +187,13 @@ public partial class App : Application {
         if (_settings.ReaderAutoPlay) {
             Log.Debug("Auto-playing TTS with highlighting");
             _audioPlayer?.Stop();
-            _ = PerformTtsWithHighlighting(cleanedText);
+            _ = PerformTtsWithHighlighting(cleanedText, 0);
         }
     }
 
-    private void OnReaderPlayRequested(string text) {
+    private void OnReaderPlayRequested(string text, int startWordIndex) {
         _audioPlayer?.Stop();
-        _ = PerformTtsWithHighlighting(text);
+        _ = PerformTtsWithHighlighting(text, startWordIndex);
     }
 
     private void OnReaderClosed() => _audioPlayer?.Stop();
@@ -201,7 +202,7 @@ public partial class App : Application {
         // Stop highlighting when playback ends
         _readerWindow?.StopHighlighting();
 
-    private async Task PerformTtsWithHighlighting(string text) {
+    private async Task PerformTtsWithHighlighting(string text, int startWordIndex) {
         _ttsCts?.Cancel();
         _ttsCts = new CancellationTokenSource();
         var ct = _ttsCts.Token;
@@ -235,7 +236,7 @@ public partial class App : Application {
                     var pos = _audioPlayer?.CurrentPositionSeconds ?? 0;
                     var adjusted = (pos - latency) * timeScale;
                     return adjusted > 0 ? adjusted : 0;
-                });
+                }, startWordIndex);
             }
             _trayIcon.ToolTipText = "LocalTTS - Ready (Ctrl+Shift+R)";
         } catch (OperationCanceledException) {

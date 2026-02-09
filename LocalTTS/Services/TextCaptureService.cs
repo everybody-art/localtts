@@ -47,7 +47,9 @@ public static class TextCaptureService {
         try {
             // Start with the focused element — the control the user is interacting with
             var focused = AutomationElement.FocusedElement;
-            if (focused == null) return null;
+            if (focused == null) {
+                return null;
+            }
 
             // Walk from focused element up through ancestors looking for TextPattern
             var current = focused;
@@ -63,13 +65,16 @@ public static class TextCaptureService {
                             sb.Append(range.GetText(-1));
                         }
                         var result = sb.ToString();
-                        if (!string.IsNullOrWhiteSpace(result))
+                        if (!string.IsNullOrWhiteSpace(result)) {
                             return result;
+                        }
                     }
                 }
 
-                if (Automation.Compare(current, AutomationElement.RootElement))
+                if (Automation.Compare(current, AutomationElement.RootElement)) {
                     break;
+                }
+
                 current = walker.GetParent(current);
             }
 
