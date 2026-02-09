@@ -13,11 +13,7 @@ A Windows system tray app that reads highlighted text aloud using [Kokoro TTS](h
 ### Reader View
 
 When Reader View is enabled, pressing **Ctrl+Shift+R** opens a clean reading window with the selected text. The window:
-- Auto-plays TTS on open (configurable)
-- Has font size controls (+/-)
-- Supports dark mode
-- Highlights the current word in sync with speech
-- Closes when you click away or press Esc
+- Click any word to start reading from that point
 
 ## Requirements
 

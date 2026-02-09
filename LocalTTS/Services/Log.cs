@@ -16,11 +16,15 @@ public static class Log {
 
     public static void RotateIfNeeded() {
         try {
-            if (!File.Exists(LogPath))
+            if (!File.Exists(LogPath)) {
                 return;
+            }
+
             var info = new FileInfo(LogPath);
-            if (info.Length <= 5 * 1024 * 1024)
+            if (info.Length <= 5 * 1024 * 1024) {
                 return;
+            }
+
             var oldPath = LogPath + ".old";
             File.Copy(LogPath, oldPath, overwrite: true);
             File.WriteAllText(LogPath, "");
@@ -41,8 +45,10 @@ public static class Log {
         ex != null ? $"{message} - {ex.GetType().Name}: {ex.Message}" : message;
 
     private static void Write(LogLevel level, string tag, string message) {
-        if (level < MinLevel)
+        if (level < MinLevel) {
             return;
+        }
+
         var line = $"[{DateTime.Now:HH:mm:ss}] [{tag}] {message}";
         lock (Lock) {
             File.AppendAllText(LogPath, line + Environment.NewLine);
